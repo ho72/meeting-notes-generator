@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>회의록 분석</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <div class="header-logo">
+    <svg viewBox="0 0 24 24" fill="white">
+      <path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/>
+      <path d="M19 10a7 7 0 0 1-14 0H3a9 9 0 0 0 8 8.94V21H9v2h6v-2h-2v-2.06A9 9 0 0 0 21 10z"/>
+    </svg>
+  </div>
+  <span class="header-title">회의록 분석</span>
+  <span class="header-sub">Whisper STT + Gemini AI</span>
+  <div style="margin-left:auto;">
+    <button class="btn btn-secondary" id="projectsBtn" style="height:32px; font-size:0.8rem;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+      </svg>
+      이전 프로젝트
+    </button>
+  </div>
+</header>
+
+<!-- Projects Modal -->
+<div class="modal-overlay" id="projectsModal">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-head-title">이전 프로젝트</span>
+      <button class="modal-close" id="closeModal">✕</button>
+    </div>
+    <div class="modal-body" id="projectsList">
+      <p class="modal-empty">불러오는 중...</p>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+
+    <div class="sidebar-block">
+      <div class="block-label">오디오 파일</div>
+      <div class="dropzone" id="dropZone">
+        <div class="dz-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </div>
+        <div class="dz-title">드래그하거나 클릭해서 선택</div>
+        <div class="dz-sub">mp3 · wav · m4a · webm · flac</div>
+      </div>
+      <div class="file-chip" id="fileChip">
+        <svg class="chip-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+        </svg>
+        <span class="chip-name" id="fileName"></span>
+        <span class="chip-size" id="fileSize"></span>
+      </div>
+
+      <div class="audio-meta" id="audioMeta">
+        <div class="meta-item">
+          <span class="meta-key">길이</span>
+          <span class="meta-val" id="metaDuration">…</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-key">형식</span>
+          <span class="meta-val" id="metaFormat">…</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-key">채널</span>
+          <span class="meta-val" id="metaChannels">…</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-key">디코딩 샘플레이트</span>
+          <span class="meta-val" id="metaSampleRate">…</span>
+        </div>
+      </div>
+
+      <input id="fileInput" type="file" accept="audio/*,.mp3,.wav,.m4a,.flac,.ogg,.opus,.aac,.webm,.aiff,.aif,.wma" hidden />
+    </div>
+
+    <div class="sidebar-block">
+      <button class="btn btn-primary btn-block" id="runBtn" disabled>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        분석 시작
+      </button>
+    </div>
+
+    <div class="sidebar-block">
+      <div class="block-label">진행 상태</div>
+      <div class="progress-list">
+        <div class="progress-item">
+          <div class="progress-row">
+            <span>업로드</span><span id="uploadText">0%</span>
+          </div>
+          <div class="progress-track"><div class="progress-fill" id="uploadBar"></div></div>
+        </div>
+        <div class="progress-item">
+          <div class="progress-row">
+            <span>STT 분석</span><span id="analysisText">0%</span>
+          </div>
+          <div class="progress-track"><div class="progress-fill" id="analysisBar"></div></div>
+        </div>
+      </div>
+      <div class="status-bar" style="margin-top: 14px;">
+        <div class="spinner" id="spinner"></div>
+        <span id="statusText">대기 중</span>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ── Main ── -->
+  <main class="main">
+
+    <nav class="tabs-bar">
+      <button class="tab-btn active" data-tab="transcript">STT 스크립트</button>
+      <button class="tab-btn" data-tab="notes">AI 회의록</button>
+    </nav>
+
+    <!-- Tab: STT Transcript -->
+    <div class="tab-pane active" id="tab-transcript">
+      <div class="tab-toolbar">
+        <span class="tab-meta" id="resultMeta">STT 완료 후 스크립트가 표시됩니다.</span>
+      </div>
+      <textarea class="editor" id="transcriptEditor"
+        placeholder="오디오를 업로드하고 분석을 시작하면 STT 스크립트가 여기에 표시됩니다.
+
+분석 완료 후 내용을 직접 편집할 수 있습니다."></textarea>
+      <div class="tab-footer">
+        <button class="btn btn-secondary" id="saveTranscriptBtn" disabled>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          스크립트 저장 (.md)
+        </button>
+        <button class="btn btn-secondary" id="downloadTranscriptBtn" disabled>스크립트 다운로드</button>
+        <span class="tab-hint" id="transcriptSaveHint"></span>
+      </div>
+    </div>
+
+    <!-- Tab: AI Notes -->
+    <div class="tab-pane" id="tab-notes">
+      <div class="tab-toolbar">
+        <button class="btn btn-primary" id="formatBtn" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
+          </svg>
+          AI로 회의록 정리
+        </button>
+        <span class="tab-hint" id="formatStatus"></span>
+        <span class="tab-hint">AI 정리 시 편집한 전사문을 Google Gemini로 전송합니다.</span>
+        <span class="tab-meta" id="notesMeta">STT 완료 후 AI 정리를 시작할 수 있습니다.</span>
+      </div>
+      <textarea class="editor" id="notesEditor"
+        placeholder="'AI로 회의록 정리' 버튼을 누르면 STT 스크립트를 바탕으로 회의록 양식에 맞게 정리됩니다.
+
+정리 후 내용을 직접 편집할 수 있습니다."></textarea>
+      <div class="tab-footer">
+        <button class="btn btn-secondary" id="saveNotesBtn" disabled>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          회의록 저장 (.md)
+        </button>
+        <button class="btn btn-secondary" id="downloadNotesBtn" disabled>회의록 다운로드</button>
+        <span class="tab-hint" id="notesSaveHint"></span>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="/static/app.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+# Local configuration
+.env
+.env.*
+!.env.example
+# Runtime and private meeting materials
+data/
+uploads/
+projects/
+logs/
+*.wav
+*.mp3
+*.m4a
+*.aiff
+*.flac
+# Development artifacts
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+.idea/
+.claude/
+.DS_Store
